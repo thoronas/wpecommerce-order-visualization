@@ -50,7 +50,7 @@ add_action( 'admin_enqueue_scripts', 'wcsv_register_scripts' );
 function test_dataset(){
 	$test_data = array();
 	$test_data['monthly'] =	wcsv_get_monthly_sales_data( '2015', '11', '2015', '12' );
-	$test_data['days'] = wcsv_get_days_with_orders('2015', '11', '2015', '12' );
+	$test_data['days'] = wcsv_get_days_with_orders('2015', '11', '2015', '12', 'abs' );
 	return $test_data;
 }
 function wcsv_get_monthly_sales_data( $start_year, $start_month, $end_year, $end_month ){
@@ -69,7 +69,7 @@ function wcsv_get_monthly_sales_data( $start_year, $start_month, $end_year, $end
 	 AND `logs`.`date` < " . $end_time . "
 	 GROUP BY `cart`.`prodid`
 	 ORDER BY SUM(`cart`.`price` * `cart`.`quantity`) DESC
-	 LIMIT 100", ARRAY_A );
+	 LIMIT 20", ARRAY_A );
 
 	 $prod_data = array( );
 	 foreach ( (array)$products as $product ) { //run through products and get each product income amounts and name
@@ -103,38 +103,53 @@ function wcsv_get_monthly_sales_data( $start_year, $start_month, $end_year, $end
  * @param  int $end_month
  * @return array            returns multidimensional array of days with total orders per day.
  */
-function wcsv_get_days_with_orders( $start_year, $start_month, $end_year, $end_month ){
+function wcsv_get_days_with_orders( $start_year, $start_month, $end_year, $end_month, $prodid = 0 ){
 	$start_time = mktime( 0, 0, 0, $start_month, 1, $start_year );
 	$end_time = mktime( 0, 0, 0, $end_month, 1, $end_year );
 	$days_totals = array();
+	$prodid = absint( $prodid );
 	global $wpdb;
 
-	$dayswithorders = $wpdb->get_results( "SELECT
-		DAYOFMONTH( FROM_UNIXTIME(`logs`.`date`) ) AS order_day,
-		`logs`.`totalprice` AS totalprice
-		FROM `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`
-		WHERE `logs`.`processed` >= 2
-		AND `logs`.`date` >= ".$start_time."
-		AND `logs`.`date` < ".$end_time."", ARRAY_A);
+	$select_month_string = "SELECT DAYOFMONTH( FROM_UNIXTIME(`logs`.`date`) ) AS order_day,";
+	$all_totals = " `logs`.`totalprice` AS totalprice";
+	$product_totals = " SUM(`cart`.`price` * `cart`.`quantity`) AS totalprice";
+	$from = " FROM `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`";
+	$products_join = " INNER JOIN `" . WPSC_TABLE_CART_CONTENTS . "` AS `cart`
+		ON `cart`.`purchaseid` = `logs`.`id`";
+	$where_string = " WHERE `logs`.`processed` >= 2
+	AND `logs`.`date` >= ".$start_time."
+	AND `logs`.`date` < ".$end_time."";
+	$product_grouping = " AND `cart`.`prodid` = " . $prodid . "
+	GROUP BY `cart`.`purchaseid`";
 
-		/**
-		 * Loop through every day in the time period specified.
-		 * If there are orders query the total sum of those orders.
-		 */
-		for ( $i = $start_time; $i < $end_time; $i = $i + 86400 ) {
-			// convert unix time stamp to day of month.
-			$day_number = date( 'd', $i );
-			$order_total =  0;
-			// loop through all orders and add any purchases to current day.
-			foreach ( $dayswithorders as $day ) {
-				if ( $day_number == $day['order_day'] ){
-					$order_total += $day['totalprice'];
-				}
+	$compiled_string = $select_month_string;
+
+	if ( empty( $prodid ) ) {
+		$compiled_string .= $all_totals . $from . $where_string;
+	} else {
+		$compiled_string .= $product_totals . $from . $products_join . $where_string . $product_grouping;
+	}
+
+	$dayswithorders = $wpdb->get_results( $compiled_string , ARRAY_A);
+
+	/**
+	 * Loop through every day in the time period specified.
+	 * If there are orders query the total sum of those orders.
+	 */
+	for ( $i = $start_time; $i < $end_time; $i = $i + 86400 ) {
+		// convert unix time stamp to day of month.
+		$day_number = date( 'd', $i );
+		$order_total =  0;
+		// loop through all orders and add any purchases to current day.
+		foreach ( $dayswithorders as $day ) {
+			if ( $day_number == $day['order_day'] ){
+				$order_total += $day['totalprice'];
 			}
-			$days_totals[] = array(
-				'day'   => $start_year.'-'.$start_month.'-'.$day_number,
-				'total' => $order_total
-			);
 		}
+		$days_totals[] = array(
+			'day'   => $start_year.'-'.$start_month.'-'.$day_number,
+			'total' => $order_total
+		);
+	}
 	return $days_totals;
 }
