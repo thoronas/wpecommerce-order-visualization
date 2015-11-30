@@ -92,24 +92,31 @@ function wcsv_get_monthly_sales_data( $start_year, $start_month, $end_year, $end
 	}
 	return $prod_data;
 }
+/**
+ * Gathers all orders in given time frame.
+ * Adds all orders together and returns multidimensional arrays
+ * with days and total orders in money.
+ *
+ * @param  int $start_year
+ * @param  int $start_month
+ * @param  int $end_year
+ * @param  int $end_month
+ * @return array            returns multidimensional array of days with total orders per day.
+ */
 function wcsv_get_days_with_orders( $start_year, $start_month, $end_year, $end_month ){
 	$start_time = mktime( 0, 0, 0, $start_month, 1, $start_year );
 	$end_time = mktime( 0, 0, 0, $end_month, 1, $end_year );
+	$days_totals = array();
 	global $wpdb;
 
 	$dayswithorders = $wpdb->get_results( "SELECT
-		DISTINCT DAYOFMONTH( FROM_UNIXTIME(`logs`.`date`) ) AS order_date
+		DAYOFMONTH( FROM_UNIXTIME(`logs`.`date`) ) AS order_day,
+		`logs`.`totalprice` AS totalprice
 		FROM `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`
 		WHERE `logs`.`processed` >= 2
 		AND `logs`.`date` >= ".$start_time."
 		AND `logs`.`date` < ".$end_time."", ARRAY_A);
-		print_r($dayswithorders);
-		$days = array();
 
-		foreach ( $dayswithorders as $day ) {
-			$days[] = $day['order_date'];
-		}
-		$days_totals = array();
 		/**
 		 * Loop through every day in the time period specified.
 		 * If there are orders query the total sum of those orders.
@@ -117,29 +124,16 @@ function wcsv_get_days_with_orders( $start_year, $start_month, $end_year, $end_m
 		for ( $i = $start_time; $i < $end_time; $i = $i + 86400 ) {
 			// convert unix time stamp to day of month.
 			$day_number = date( 'd', $i );
-			// if day of month has no order move to next day.
-			if ( ! in_array( $day_number, $days ) ){
-				$days_totals[] = array(
-					'day'   => $start_year.'-'.$start_month.'-'.$day_number,
-					'total' => 0
-				);
-				continue;
+			$order_total =  0;
+			// loop through all orders and add any purchases to current day.
+			foreach ( $dayswithorders as $day ) {
+				if ( $day_number == $day['order_day'] ){
+					$order_total += $day['totalprice'];
+				}
 			}
-			// -1 second for a second into the previous day.
-			$current_day_start = mktime( 0, 0, -1, $start_month, $day_number, $start_year );
-			// start of the next day
-			$current_day_end = mktime( 24, 0, 0, $start_month, $day_number, $start_year );
-
-			$order_total = $wpdb->get_results( "SELECT
-				SUM(`logs`.`totalprice`) AS total
-				FROM `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`
-				WHERE `logs`.`processed` >= 2
-				AND `logs`.`date` > ".$current_day_start."
-				AND `logs`.`date` < ".$current_day_end."
-				", ARRAY_A);
 			$days_totals[] = array(
 				'day'   => $start_year.'-'.$start_month.'-'.$day_number,
-				'total' => $order_total[0]['total']
+				'total' => $order_total
 			);
 		}
 	return $days_totals;
