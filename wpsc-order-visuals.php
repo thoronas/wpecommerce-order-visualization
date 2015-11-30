@@ -98,8 +98,7 @@ function wcsv_get_days_with_orders( $start_year, $start_month, $end_year, $end_m
 	global $wpdb;
 
 	$dayswithorders = $wpdb->get_results( "SELECT
-		DISTINCT DAYOFMONTH( FROM_UNIXTIME(`logs`.`date`) ) AS order_date,
-		SUM(`logs`.`totalprice`) AS totalprice
+		DISTINCT DAYOFMONTH( FROM_UNIXTIME(`logs`.`date`) ) AS order_date
 		FROM `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`
 		WHERE `logs`.`processed` >= 2
 		AND `logs`.`date` >= ".$start_time."
