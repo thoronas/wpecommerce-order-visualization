@@ -51,7 +51,8 @@ function test_dataset(){
 	$test_data = array();
 	$test_data['monthly'] = wcsv_get_monthly_sales_data( '2015', '11', '2015', '12' );
 	$test_data['days'] = wcsv_get_days_with_orders('2015', '11', '2015', '12' );
-	$test_data['users'] = wcsv_get_top_users('2015', '11', '2015', '12' );
+	$test_data['users'] = wcsv_get_top_users('2015', '11', '2016', '01' );
+	$test_data['unregistered'] = wcsv_get_unregistered_visitor_sales('2015', '11', '2016', '01');
 	return $test_data;
 }
 function wcsv_get_monthly_sales_data( $start_year, $start_month, $end_year, $end_month ){
@@ -194,4 +195,24 @@ function wcsv_get_top_users( $start_year, $start_month, $end_year, $end_month ){
 	$non_registered[0]['user_ID'] = '0';
 	$totals = array_merge( $users, $non_registered );
 	return $totals;
+}
+function wcsv_get_unregistered_visitor_sales( $start_year, $start_month, $end_year, $end_month ){
+	$start_time = mktime( 0, 0, 0, $start_month, 1, $start_year );
+	$end_time = mktime( 0, 0, 0, $end_month, 1, $end_year );
+	global $wpdb;
+
+	$non_registered = $wpdb->get_results( "SELECT
+		`forms`.value as name,
+		SUM(`logs`.`totalprice`) as `sale_totals`
+		FROM `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`
+		INNER JOIN `" . WPSC_TABLE_SUBMITTED_FORM_DATA . "` AS `forms`
+			ON `forms`.`log_id` = `logs`.`id`
+		WHERE `logs`.`processed` >= 2
+		AND `logs`.`user_ID` = 0
+		AND `forms`.`form_id` = 9
+		AND `logs`.`date` >= ".$start_time."
+		AND `logs`.`date` < ".$end_time."
+		GROUP BY `forms`.`value`
+	", ARRAY_A );
+	return $non_registered;
 }

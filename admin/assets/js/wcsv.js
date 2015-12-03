@@ -5,6 +5,7 @@
 		render_pie_chart( dataset.monthly, "#report" );
 		render_product_sales_graph( dataset.days, "#price-chart" );
 		render_pie_chart( dataset.users, "#users" );
+		render_pie_chart( dataset.unregistered, "#unregistered" );
 
     });
 
@@ -88,7 +89,6 @@
 
         var pie = d3.layout.pie()
             .value(function(d) {
-				console.log(d.sale_totals);
 				return d.sale_totals;
             });
 
@@ -109,6 +109,7 @@
             .attr("transform", "translate(" + outerRadius + "," + outerRadius + ")")
             .on('click', function(d) {
                 // do something when you click on section.
+                console.log(d);
             });
 
         //Draw arc paths
