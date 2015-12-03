@@ -55,6 +55,14 @@ function test_dataset(){
 	$test_data['unregistered'] = wcsv_get_unregistered_visitor_sales('2015', '11', '2016', '01');
 	return $test_data;
 }
+/**
+ * Get the sum totals of the top 20 products in a given time period.
+ * @param  int $start_year
+ * @param  int $start_month
+ * @param  int $end_year
+ * @param  int $end_month
+ * @return array              array of products and their sales totals
+ */
 function wcsv_get_monthly_sales_data( $start_year, $start_month, $end_year, $end_month ){
 	global $wpdb;
 
@@ -62,37 +70,19 @@ function wcsv_get_monthly_sales_data( $start_year, $start_month, $end_year, $end
 	$end_time = mktime( 0, 0, 0, $end_month, 1, $end_year );
 
 	$products = $wpdb->get_results( "SELECT `cart`.`prodid`,
-	 `cart`.`name`
+	 `cart`.`name` as `name`,
+	 SUM(`cart`.`price` * `cart`.`quantity`) as `sale_totals`
 	 FROM `" . WPSC_TABLE_CART_CONTENTS . "` AS `cart`
 	 INNER JOIN `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`
-	 ON `cart`.`purchaseid` = `logs`.`id`
+		 ON `cart`.`purchaseid` = `logs`.`id`
 	 WHERE `logs`.`processed` >= 2
-	 AND `logs`.`date` >= " . $start_time . "
-	 AND `logs`.`date` < " . $end_time . "
+		 AND `logs`.`date` >= " . $start_time . "
+		 AND `logs`.`date` < " . $end_time . "
 	 GROUP BY `cart`.`prodid`
 	 ORDER BY SUM(`cart`.`price` * `cart`.`quantity`) DESC
 	 LIMIT 20", ARRAY_A );
 
-	 $prod_data = array( );
-	 foreach ( (array)$products as $product ) { //run through products and get each product income amounts and name
-		$sale_totals = array( );
-			$prodsql = "SELECT
-			SUM(`cart`.`price` * `cart`.`quantity`) AS sum
-			FROM `" . WPSC_TABLE_CART_CONTENTS . "` AS `cart`
-			INNER JOIN `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`
-				ON `cart`.`purchaseid` = `logs`.`id`
-			WHERE `logs`.`processed` >= 2
-				AND `logs`.`date` >= " . $start_time . "
-				AND `logs`.`date` < " . $end_time . "
-				AND `cart`.`prodid` = " . $product['prodid'] . "
-			GROUP BY `cart`.`prodid`"; //get the amount of income that current product has generaterd over current time range
-			$sale_totals[] = $wpdb->get_var( $prodsql ); //push amount to array
-		$prod_data[] = array(
-			'sale_totals' => $sale_totals,
-			'name' => $product['name'] ); //result: array of 2: $prod_data[0] = array(income)
-		$sums = array( ); //reset array    //$prod_data[1] = product name
-	}
-	return $prod_data;
+	return $products;
 }
 /**
  * Gathers all orders in given time frame.
@@ -174,19 +164,19 @@ function wcsv_get_top_users( $start_year, $start_month, $end_year, $end_month ){
 		`users`.`user_email`
 		FROM `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`
 		INNER JOIN `" . $wpdb->users . "` AS `users`
-		ON `users`.`ID` = `logs`.`user_ID`
+			ON `users`.`ID` = `logs`.`user_ID`
 		WHERE `logs`.`processed` >= 2
-		AND `logs`.`date` >= ".$start_time."
-		AND `logs`.`date` < ".$end_time."
+			AND `logs`.`date` >= ".$start_time."
+			AND `logs`.`date` < ".$end_time."
 		GROUP BY `logs`.`user_ID`
 		LIMIT 20", ARRAY_A );
 	 $non_registered = $wpdb->get_results( "SELECT
 		SUM(`logs`.`totalprice`) as `sale_totals`
 		FROM `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`
 		WHERE `logs`.`processed` >= 2
-		AND `logs`.`user_ID` = 0
-		AND `logs`.`date` >= ".$start_time."
-		AND `logs`.`date` < ".$end_time."
+			AND `logs`.`user_ID` = 0
+			AND `logs`.`date` >= ".$start_time."
+			AND `logs`.`date` < ".$end_time."
 		GROUP BY `logs`.`user_ID`
 		LIMIT 20", ARRAY_A );
 
@@ -208,11 +198,33 @@ function wcsv_get_unregistered_visitor_sales( $start_year, $start_month, $end_ye
 		INNER JOIN `" . WPSC_TABLE_SUBMITTED_FORM_DATA . "` AS `forms`
 			ON `forms`.`log_id` = `logs`.`id`
 		WHERE `logs`.`processed` >= 2
-		AND `logs`.`user_ID` = 0
-		AND `forms`.`form_id` = 9
-		AND `logs`.`date` >= ".$start_time."
-		AND `logs`.`date` < ".$end_time."
+			AND `logs`.`user_ID` = 0
+			AND `forms`.`form_id` = 9
+			AND `logs`.`date` >= ".$start_time."
+			AND `logs`.`date` < ".$end_time."
 		GROUP BY `forms`.`value`
 	", ARRAY_A );
 	return $non_registered;
+}
+function wcsv_et_sales_per_category( $start_year, $start_month, $end_year, $end_month ){
+	$start_time = mktime( 0, 0, 0, $start_month, 1, $start_year );
+	$end_time = mktime( 0, 0, 0, $end_month, 1, $end_year );
+	global $wpdb;
+	$categories = $wpdb->get_results( "SELECT
+		SUM(`cart`.`price` * `cart`.`quantity`) as `sale_totals`,
+		`terms`.`name` as `name`
+		FROM `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`
+		INNER JOIN `" . WPSC_TABLE_CART_CONTENTS . "` AS `cart`
+			ON `cart`.`purchaseid` = `logs`.`id`
+		INNER JOIN `" . $wpdb->term_relationships . "` as `term_rel`
+			ON `cart`.`prodid` = `term_rel`.object_id
+		INNER JOIN `" . $wpdb->terms . "` as `terms`
+			ON `terms`.`term_id` = `term_rel`.`term_taxonomy_id`
+		WHERE `logs`.`processed` >= 2
+			AND `logs`.`id` = `cart`.`purchaseid`
+			AND `cart`.`prodid` = `term_rel`.`object_id`
+			AND `logs`.`date` >= ".$start_time."
+			AND `logs`.`date` < ".$end_time."
+		GROUP BY `terms`.`name`
+	", ARRAY_A );
 }

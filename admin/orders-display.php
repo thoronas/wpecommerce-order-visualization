@@ -21,7 +21,7 @@
 
 </style>
 <pre>
-<?php print_r( wcsv_get_unregistered_visitor_sales('2015', '11', '2016', '01') ); ?>
+<?php print_r( wcsv_et_sales_per_category('2015', '11', '2016', '01') ); ?>
 </pre>
 <div class="wrap">
 	<div id="price-chart"></div>
