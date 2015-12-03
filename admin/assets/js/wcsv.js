@@ -2,16 +2,19 @@
     'use strict';
 
     $(function() {
-		render_popular_product_pie( dataset.monthly, "#report" );
+		render_pie_chart( dataset.monthly, "#report" );
 		render_product_sales_graph( dataset.days, "#price-chart" );
+		render_pie_chart( dataset.users, "#users" );
+
     });
 
 	function render_product_sales_graph( dataset, $selector ) {
-		var chart = '';
+
 		//Width and height
 		var margin = {top: 20, right: 20, bottom: 30, left: 50},
 	    width = 960 - margin.left - margin.right,
 	    height = 500 - margin.top - margin.bottom;
+		// need to parse date into format D3 can read.
 		var parseDate = d3.time.format("%Y-%m-%d").parse;
 		var x = d3.time.scale()
 		    .range([0, width]);
@@ -47,8 +50,6 @@
 	    x.domain(d3.extent(dataset, function(d) { return d.day; }));
 	    y.domain(d3.extent(dataset, function(d) { return d.total; }));
 
-
-
 	    svg.append("g")
 	        .attr("class", "x axis")
 	        .attr("transform", "translate(0," + height + ")")
@@ -63,15 +64,15 @@
 	        .style("text-anchor", "end")
 	        .text("Total Sales ($)");
 
-	    svg.append("path")
 			// explanation of datum() vs data() found here: http://stackoverflow.com/a/13728584
+	    svg.append("path")
 			.datum(dataset)
 	        .attr("class", "line")
 	        .attr("d", line);
 
 	}
 
-    function render_popular_product_pie( dataset, $selector ) {
+    function render_pie_chart( dataset, $selector ) {
 
         //Width and height
         var w = 400;
@@ -87,7 +88,8 @@
 
         var pie = d3.layout.pie()
             .value(function(d) {
-                return d.sale_totals[0];
+				console.log(d.sale_totals);
+				return d.sale_totals;
             });
 
         //Easy colors accessible via a 10-step ordinal scale
@@ -123,7 +125,7 @@
             })
             .attr("text-anchor", "middle")
             .text(function(d) {
-                var text = d.data.product_name + ' ($' + d.data.sale_totals[0] + ')';
+                var text = d.data.name + ' ($' + d.data.sale_totals + ')';
                 return text;
             });
     }

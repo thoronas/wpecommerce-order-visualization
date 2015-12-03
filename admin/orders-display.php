@@ -20,8 +20,11 @@
 }
 
 </style>
-
+<pre>
+<?php print_r( wcsv_get_top_users('2015', '11', '2016', '01') ); ?>
+</pre>
 <div class="wrap">
 	<div id="price-chart"></div>
 	<div id="report"></div>
+	<div id="users"></div>
 </div>

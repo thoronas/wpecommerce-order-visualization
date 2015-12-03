@@ -49,8 +49,9 @@ function wcsv_register_scripts(){
 add_action( 'admin_enqueue_scripts', 'wcsv_register_scripts' );
 function test_dataset(){
 	$test_data = array();
-	$test_data['monthly'] =	wcsv_get_monthly_sales_data( '2015', '11', '2015', '12' );
-	$test_data['days'] = wcsv_get_days_with_orders('2015', '11', '2015', '12', 'abs' );
+	$test_data['monthly'] = wcsv_get_monthly_sales_data( '2015', '11', '2015', '12' );
+	$test_data['days'] = wcsv_get_days_with_orders('2015', '11', '2015', '12' );
+	$test_data['users'] = wcsv_get_top_users('2015', '11', '2015', '12' );
 	return $test_data;
 }
 function wcsv_get_monthly_sales_data( $start_year, $start_month, $end_year, $end_month ){
@@ -87,7 +88,7 @@ function wcsv_get_monthly_sales_data( $start_year, $start_month, $end_year, $end
 			$sale_totals[] = $wpdb->get_var( $prodsql ); //push amount to array
 		$prod_data[] = array(
 			'sale_totals' => $sale_totals,
-			'product_name' => $product['name'] ); //result: array of 2: $prod_data[0] = array(income)
+			'name' => $product['name'] ); //result: array of 2: $prod_data[0] = array(income)
 		$sums = array( ); //reset array    //$prod_data[1] = product name
 	}
 	return $prod_data;
@@ -148,8 +149,49 @@ function wcsv_get_days_with_orders( $start_year, $start_month, $end_year, $end_m
 		}
 		$days_totals[] = array(
 			'day'   => $start_year.'-'.$start_month.'-'.$day_number,
-			'total' => $order_total
+			'total' => $order_total,
+			'product' => ( empty( $prodid ) ? 'total' : $prodid  )
 		);
 	}
 	return $days_totals;
+}
+/**
+ * Gets the totals sales per user. Adds all sales of non users into same array.
+ * @param  [type] $start_year  [description]
+ * @param  [type] $start_month [description]
+ * @param  [type] $end_year    [description]
+ * @param  [type] $end_month   [description]
+ * @return array              Returns array of user ids, total sales, names and emails.
+ */
+function wcsv_get_top_users( $start_year, $start_month, $end_year, $end_month ){
+	$start_time = mktime( 0, 0, 0, $start_month, 1, $start_year );
+	$end_time = mktime( 0, 0, 0, $end_month, 1, $end_year );
+	global $wpdb;
+	$users = $wpdb->get_results( "SELECT `logs`.`user_ID`,
+		SUM(`logs`.`totalprice`) as `sale_totals`,
+		`users`.`display_name` as `name`,
+		`users`.`user_email`
+		FROM `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`
+		INNER JOIN `" . $wpdb->users . "` AS `users`
+		ON `users`.`ID` = `logs`.`user_ID`
+		WHERE `logs`.`processed` >= 2
+		AND `logs`.`date` >= ".$start_time."
+		AND `logs`.`date` < ".$end_time."
+		GROUP BY `logs`.`user_ID`
+		LIMIT 20", ARRAY_A );
+	 $non_registered = $wpdb->get_results( "SELECT
+		SUM(`logs`.`totalprice`) as `sale_totals`
+		FROM `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`
+		WHERE `logs`.`processed` >= 2
+		AND `logs`.`user_ID` = 0
+		AND `logs`.`date` >= ".$start_time."
+		AND `logs`.`date` < ".$end_time."
+		GROUP BY `logs`.`user_ID`
+		LIMIT 20", ARRAY_A );
+
+	// add data for consistency so D3 knows how to display it.
+	$non_registered[0]['name'] = 'unregistered';
+	$non_registered[0]['user_ID'] = '0';
+	$totals = array_merge( $users, $non_registered );
+	return $totals;
 }
