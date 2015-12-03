@@ -53,6 +53,7 @@ function test_dataset(){
 	$test_data['days'] = wcsv_get_days_with_orders('2015', '11', '2015', '12' );
 	$test_data['users'] = wcsv_get_top_users('2015', '11', '2016', '01' );
 	$test_data['unregistered'] = wcsv_get_unregistered_visitor_sales('2015', '11', '2016', '01');
+	$test_data['categories'] = wcsv_get_sales_per_category('2015', '11', '2016', '01');
 	return $test_data;
 }
 /**
@@ -206,25 +207,32 @@ function wcsv_get_unregistered_visitor_sales( $start_year, $start_month, $end_ye
 	", ARRAY_A );
 	return $non_registered;
 }
-function wcsv_et_sales_per_category( $start_year, $start_month, $end_year, $end_month ){
+function wcsv_get_sales_per_category( $start_year, $start_month, $end_year, $end_month ){
 	$start_time = mktime( 0, 0, 0, $start_month, 1, $start_year );
 	$end_time = mktime( 0, 0, 0, $end_month, 1, $end_year );
 	global $wpdb;
 	$categories = $wpdb->get_results( "SELECT
 		SUM(`cart`.`price` * `cart`.`quantity`) as `sale_totals`,
 		`terms`.`name` as `name`
-		FROM `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`
-		INNER JOIN `" . WPSC_TABLE_CART_CONTENTS . "` AS `cart`
-			ON `cart`.`purchaseid` = `logs`.`id`
+		FROM `" . $wpdb->terms . "` as `terms`
+		INNER JOIN `" . $wpdb->term_taxonomy . "` as `term_tax`
+			ON `terms`.`term_id` = `term_tax`.`term_id`
 		INNER JOIN `" . $wpdb->term_relationships . "` as `term_rel`
+			ON `term_tax`.`term_taxonomy_id` = `term_rel`.`term_taxonomy_id`
+		INNER JOIN `" . WPSC_TABLE_CART_CONTENTS . "` AS `cart`
 			ON `cart`.`prodid` = `term_rel`.object_id
-		INNER JOIN `" . $wpdb->terms . "` as `terms`
-			ON `terms`.`term_id` = `term_rel`.`term_taxonomy_id`
-		WHERE `logs`.`processed` >= 2
+		INNER JOIN `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`
+			ON `cart`.`purchaseid` = `logs`.`id`
+
+		WHERE `term_tax`.`taxonomy` = 'wpsc_product_category'
+			AND `logs`.`processed` >= 2
 			AND `logs`.`id` = `cart`.`purchaseid`
 			AND `cart`.`prodid` = `term_rel`.`object_id`
 			AND `logs`.`date` >= ".$start_time."
 			AND `logs`.`date` < ".$end_time."
-		GROUP BY `terms`.`name`
-	", ARRAY_A );
+		GROUP BY `terms`.`term_id`
+		ORDER BY SUM(`cart`.`price` * `cart`.`quantity`) DESC
+	LIMIT 20", ARRAY_A );
+
+	return $categories;
 }

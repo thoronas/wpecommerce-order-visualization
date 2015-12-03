@@ -21,11 +21,12 @@
 
 </style>
 <pre>
-<?php print_r( wcsv_et_sales_per_category('2015', '11', '2016', '01') ); ?>
+<?php //print_r( wcsv_get_sales_per_category('2015', '11', '2016', '01') ); ?>
 </pre>
 <div class="wrap">
-	<div id="price-chart"></div>
+	<div id="category-sales"></div>
 	<div id="report"></div>
+	<div id="price-chart"></div>
 	<div id="users"></div>
 	<div id="unregistered"></div>
 </div>

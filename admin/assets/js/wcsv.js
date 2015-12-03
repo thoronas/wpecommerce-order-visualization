@@ -6,7 +6,7 @@
 		render_product_sales_graph( dataset.days, "#price-chart" );
 		render_pie_chart( dataset.users, "#users" );
 		render_pie_chart( dataset.unregistered, "#unregistered" );
-
+		render_pie_chart( dataset.categories, "#category-sales");
     });
 
 	function render_product_sales_graph( dataset, $selector ) {
