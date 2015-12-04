@@ -12,13 +12,6 @@
 .x.axis path {
   display: none;
 }
-
-.line {
-  fill: none;
-  stroke: steelblue;
-  stroke-width: 1.5px;
-}
-
 path.slice{
 	stroke-width:2px;
 }
@@ -38,15 +31,16 @@ polyline{
 <?php //print_r( wcsv_get_sales_per_category('2015', '11', '2016', '01') ); ?>
 </pre>
 <div class="wrap">
+	<div class="sales-svg" id="price-chart">
+		<h2>Sales by Month</h2>
+	</div>
 	<div class="sales-svg pie" id="category-sales">
 		<h2>Sales By Category</h2>
 	</div>
 	<div class="sales-svg pie" id="report">
 		<h2>Top Products</h2>
 	</div>
-	<div class="sales-svg" id="price-chart">
-		<h2>Sales by Month</h2>
-	</div>
+
 	<div class="sales-svg pie" id="users">
 		<h2>Sales by User</h2>
 	</div>

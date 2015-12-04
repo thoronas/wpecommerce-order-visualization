@@ -2,136 +2,12 @@
     'use strict';
 
     $(function() {
-		// render_pie_chart( dataset.monthly, "#report" );
 		render_pie_chart( dataset.monthly, "#report" );
-		render_product_sales_graph( dataset.days, "#price-chart" );
 		render_pie_chart( dataset.users, "#users" );
 		render_pie_chart( dataset.unregistered, "#unregistered" );
 		render_pie_chart( dataset.categories, "#category-sales");
+		render_product_sales_graph_v2( dataset.combined, "#price-chart" );
     });
-
-	function render_product_sales_graph( dataset, $selector ) {
-
-		//Width and height
-		var margin = {top: 20, right: 20, bottom: 30, left: 50},
-	    width = 960 - margin.left - margin.right,
-	    height = 500 - margin.top - margin.bottom;
-		// need to parse date into format D3 can read.
-		var parseDate = d3.time.format("%Y-%m-%d").parse;
-		var x = d3.time.scale()
-		    .range([0, width]);
-		var y = d3.scale.linear()
-		    .range([height, 0]);
-		var line = d3.svg.line()
-		    .x(function(d) { return x(d.day); })
-		    .y(function(d) { return y(d.total); });
-		var xAxis = d3.svg.axis()
-		    .scale(x)
-		    .orient("bottom");
-		var yAxis = d3.svg.axis()
-		    .scale(y)
-		    .orient("left");
-		var svg = d3.select($selector)
-			.append("svg")
-		    .attr("width", width + margin.left + margin.right)
-		    .attr("height", height + margin.top + margin.bottom)
-		 	.append("g")
-		    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-		x.domain(d3.extent(dataset, function(d) { return d.day; }));
-	    y.domain(d3.extent(dataset, function(d) { return d.total; }));
-
-		// go through dataset and parse date.
-		dataset.forEach(function(d) {
-	      d.day = parseDate(d.day);
-		  //convert total to number.
-		  d.total = +d.total;
-
-	    });
-
-	    x.domain(d3.extent(dataset, function(d) { return d.day; }));
-	    y.domain(d3.extent(dataset, function(d) { return d.total; }));
-
-	    svg.append("g")
-	        .attr("class", "x axis")
-	        .attr("transform", "translate(0," + height + ")")
-	        .call(xAxis);
-	    svg.append("g")
-	        .attr("class", "y axis")
-	        .call(yAxis)
-	      .append("text")
-	        .attr("transform", "rotate(-90)")
-	        .attr("y", 6)
-	        .attr("dy", ".71em")
-	        .style("text-anchor", "end")
-	        .text("Total Sales ($)");
-
-			// explanation of datum() vs data() found here: http://stackoverflow.com/a/13728584
-	    svg.append("path")
-			.datum(dataset)
-	        .attr("class", "line")
-	        .attr("d", line);
-
-	}
-
-    function old_render_pie_chart( dataset, $selector ) {
-
-        //Width and height
-        var w = 400;
-        var h = 500;
-
-        // w should be divided by 2 to make proper pie chart
-        var outerRadius = w / 2;
-        // divide width to create donut, eg: w/3
-        var innerRadius = 0;
-        var arc = d3.svg.arc()
-            .innerRadius(innerRadius)
-            .outerRadius(outerRadius);
-
-        var pie = d3.layout.pie()
-            .value(function(d) {
-				return d.sale_totals;
-            });
-
-        //Easy colors accessible via a 10-step ordinal scale
-        var color = d3.scale.category10();
-        //Create SVG element
-        var svg = d3.select($selector)
-            .append("svg")
-            .attr("width", w)
-            .attr("height", h);
-
-        //Set up groups
-        var arcs = svg.selectAll("g.arc")
-            .data(pie(dataset))
-            .enter()
-            .append("g")
-            .attr("class", "arc")
-            .attr("transform", "translate(" + outerRadius + "," + outerRadius + ")")
-            .on('click', function(d) {
-                // do something when you click on section.
-                console.log(d);
-            });
-
-        //Draw arc paths
-        arcs.append("path")
-            .attr("fill", function(d, i) {
-                return color(i);
-            })
-            .attr("d", arc);
-
-        //Labels
-        arcs.append("text")
-            .attr("transform", function(d) {
-                return "translate(" + arc.centroid(d) + ")";
-            })
-            .attr("text-anchor", "middle")
-            .text(function(d) {
-                var text = d.data.name + ' ($' + d.data.sale_totals + ')';
-                return text;
-            });
-    }
-
 
 	function render_pie_chart( data, $selector ) {
 
@@ -261,6 +137,102 @@
 
 		polyline.exit()
 			.remove();
+
+	}
+
+	function render_product_sales_graph_v2( dataset, $selector ) {
+
+		//Width and height
+		var margin = {top: 20, right: 150, bottom: 30, left: 50},
+		width = 900 - margin.left - margin.right,
+		height = 400 - margin.top - margin.bottom;
+		// need to parse date into format D3 can read.
+		var parseDate = d3.time.format("%Y-%m-%d").parse;
+		// set the ranges. Uses SVG dimensions.
+		var x = d3.time.scale()
+			.range([0, width]);
+		var y = d3.scale.linear()
+			.range([height, 0]);
+		// Draw the line based on data.
+		var line = d3.svg.line()
+			.x(function(d) { return x(d.day); })
+			.y(function(d) { return y(d.total); });
+		//
+		var xAxis = d3.svg.axis()
+			.scale(x)
+			.orient("bottom");
+		var yAxis = d3.svg.axis()
+			.scale(y)
+			.orient("left");
+		var svg = d3.select($selector)
+			.append("svg")
+			.attr("width", width + margin.left + margin.right)
+			.attr("height", height + margin.top + margin.bottom)
+			.append("g")
+			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+	    var color = d3.scale.category10();   // set the colour scale
+
+		// go through dataset and parse date.
+		dataset.forEach(function(d) {
+		  d.day = parseDate(d.day);
+		  //convert total to number.
+		  d.total = +d.total;
+
+		});
+		// Nest the entries by symbol
+	    var dataNest = d3.nest()
+	        .key(function(d) {return d.product;})
+	        .entries(dataset);
+
+	    var legendSpace = height/dataNest.length; // spacing for legend
+
+		x.domain(d3.extent(dataset, function(d) { return d.day; }));
+		y.domain(d3.extent(dataset, function(d) { return d.total; }));
+		dataNest.forEach( function(d,i){
+			svg.append("path")
+				.attr("class", "line"+d.key)
+				.style("stroke", function() {
+					// Add the colours dynamically
+                	return color(d.key);
+				})
+				.style("fill", "none")
+				.attr("d", line(d.values));
+
+			// add legend color box.
+			svg.append("rect")
+				.attr("x", width + 10) // spacing
+				.attr("y", (legendSpace/2)+i*legendSpace - 7)
+				.attr("width", 5)
+				.attr("height", 5)
+				.style("fill", function() { // dynamic colours
+	                return color(d.key);
+				});
+
+			// Add the Legend
+	        svg.append("text")
+	            .attr("x", width + 17) // spacing
+	            .attr("y", (legendSpace/2)+i*legendSpace)
+	            .attr("class", "legend")    // style the legend
+	            .text(d.key);
+
+		});
+
+		svg.append("g")
+			.attr("class", "x axis")
+			.attr("transform", "translate(0," + height + ")")
+			.call(xAxis);
+		svg.append("g")
+			.attr("class", "y axis")
+			.call(yAxis)
+		  .append("text")
+			.attr("transform", "rotate(-90)")
+			.attr("y", 6)
+			.attr("dy", ".71em")
+			.style("text-anchor", "end")
+			.text("Total Sales ($)");
+
+			// explanation of datum() vs data() found here: http://stackoverflow.com/a/13728584
+
 
 	}
 

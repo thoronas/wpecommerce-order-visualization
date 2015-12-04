@@ -48,12 +48,21 @@ function wcsv_register_scripts(){
 }
 add_action( 'admin_enqueue_scripts', 'wcsv_register_scripts' );
 function test_dataset(){
+	$p1 = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1402 );
+	$p2 = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1404 );
+	$p3 = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1397 );
+	$p4 = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1407 );
+	$p5 = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1395 );
+	$p6 = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1412 );
+	$p7 = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1410 );
+	$combined = array_merge( $p1, $p2, $p3, $p4, $p5, $p6, $p7 );
 	$test_data = array();
 	$test_data['monthly'] = wcsv_get_monthly_sales_data( '2015', '11', '2015', '12' );
-	$test_data['days'] = wcsv_get_days_with_orders('2015', '11', '2015', '12' );
+	$test_data['days'] = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1407 );
 	$test_data['users'] = wcsv_get_top_users('2015', '11', '2016', '01' );
 	$test_data['unregistered'] = wcsv_get_unregistered_visitor_sales('2015', '11', '2016', '01');
 	$test_data['categories'] = wcsv_get_sales_per_category('2015', '11', '2016', '01');
+	$test_data['combined'] = $combined;
 	return $test_data;
 }
 /**
@@ -139,10 +148,11 @@ function wcsv_get_days_with_orders( $start_year, $start_month, $end_year, $end_m
 				$order_total += $day['totalprice'];
 			}
 		}
+
 		$days_totals[] = array(
 			'day'   => $start_year.'-'.$start_month.'-'.$day_number,
 			'total' => $order_total,
-			'product' => ( empty( $prodid ) ? 'total' : $prodid  )
+			'product' => ( empty( $prodid ) ? 'total' : get_the_title($prodid)  )
 		);
 	}
 	return $days_totals;
