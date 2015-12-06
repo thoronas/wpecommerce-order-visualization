@@ -28,11 +28,26 @@ polyline{
 }
 </style>
 <pre>
-<?php //print_r( wcsv_get_sales_per_category('2015', '11', '2016', '01') ); ?>
 </pre>
 <div class="wrap">
 	<div class="sales-svg" id="price-chart">
 		<h2>Sales by Month</h2>
+		<?php
+		$post_args = array(
+			'post_type' => 'wpsc-product'
+		);
+		$products = new WP_Query($post_args);
+		if( $products->have_posts() ){
+			while( $products->have_posts() ): $products->the_post();
+			?>
+			<label for="<?php echo absint( get_the_id() ); ?>">
+			<input type="checkbox" id="<?php echo absint( get_the_id() ); ?>" value="<?php echo absint( get_the_id() ); ?>" name="product[]" />
+			<span><?php the_title(); ?></span>
+			</label>
+			<?php
+			endwhile; wp_reset_postdata();
+		}
+		?>
 	</div>
 	<div class="sales-svg pie" id="category-sales">
 		<h2>Sales By Category</h2>
