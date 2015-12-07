@@ -5,9 +5,30 @@
 		// demo data
 		render_pie_chart( dataset.monthly, "#report" );
 		render_pie_chart( dataset.users, "#users" );
-		render_pie_chart( dataset.unregistered, "#unregistered" );
 		render_pie_chart( dataset.categories, "#category-sales");
 		render_product_sales_graph_v2( dataset.days, "#price-chart" );
+
+
+		$('#users').on( 'click', '#get_registered_users', function(){
+			var data = {
+				'action': 'wcsv_registered_user_sales',
+			};
+			console.log( data );
+			$.ajax({
+				type: 'POST',
+				url: ajax_info.ajax_url,
+				data: data,
+				dataType: "json",
+				success: function( response ) {
+					console.log(response);
+					render_pie_chart( response, "#users" );
+				}
+			}).fail(function (response) {
+				if ( window.console && window.console.log ) {
+					console.log( response );
+				}
+			});
+		});
 
 		$('#update-product-data').on( 'click', function(){
 			var selected_products = [];
@@ -42,6 +63,7 @@
     });
 
 	function render_pie_chart( data, $selector ) {
+		d3.select($selector).html("");
 
 		var width = 400,
 		    height = 450,
@@ -115,6 +137,10 @@
 			})
 			.on("click", function(d){
 				console.log(d);
+				if( d.data.action == 1 ) {
+					// do a thing!
+					get_unregistered_users($selector);
+				}
 			});
 
 		function midAngle(d){
@@ -173,6 +199,7 @@
 	}
 
 	function render_product_sales_graph_v2( dataset, $selector ) {
+		// clear old svgs.
 		d3.select($selector).html("");
 		//Width and height
 		var margin = {top: 20, right: 150, bottom: 30, left: 50},
@@ -263,4 +290,24 @@
 			.text("Total Sales ($)");
 	}
 
+	function get_unregistered_users(selector){
+		console.log(selector);
+		var data = {
+			'action': 'wcsv_nonregisted_sales',
+		};
+		$.ajax({
+			type: 'POST',
+			url: ajax_info.ajax_url,
+			data: data,
+			dataType: "json",
+			success: function( response ) {
+				render_pie_chart( response, selector );
+				jQuery(selector).prepend('<button id="get_registered_users" class="button">View Registered User Sales</button>');
+			}
+		}).fail(function (response) {
+			if ( window.console && window.console.log ) {
+				console.log( response );
+			}
+		});
+	}
 })(jQuery);

@@ -57,17 +57,13 @@ polyline{
 	<button id="update-product-data" class="button">Update Chart</button>
 	</div>
 	<div class="sales-svg" id="price-chart"></div>
-	<div class="sales-svg pie" id="category-sales">
-		<h2>Sales By Category</h2>
-	</div>
-	<div class="sales-svg pie" id="report">
-		<h2>Top Products</h2>
-	</div>
 
-	<div class="sales-svg pie" id="users">
-		<h2>Sales by User</h2>
-	</div>
-	<div class="sales-svg pie" id="unregistered">
-		<h2>Sales by unregistered visitor email</h2>
-	</div>
+	<h2>Sales By Category</h2>
+	<div class="sales-svg pie" id="category-sales"></div>
+
+	<h2>Top Products</h2>
+	<div class="sales-svg pie" id="report"></div>
+
+	<h2 class="user-sales">Sales by User</h2>
+	<div class="sales-svg pie" id="users"></div>
 </div>

@@ -52,7 +52,6 @@ function test_dataset(){
 	$test_data['monthly'] = wcsv_get_monthly_sales_data( '2015', '11', '2015', '12' );
 	$test_data['days'] = wcsv_get_days_with_orders('2015', '11', '2015', '12' );
 	$test_data['users'] = wcsv_get_top_users('2015', '11', '2016', '01' );
-	$test_data['unregistered'] = wcsv_get_unregistered_visitor_sales('2015', '11', '2016', '01');
 	$test_data['categories'] = wcsv_get_sales_per_category('2015', '11', '2016', '01');
 	return $test_data;
 }
@@ -67,6 +66,18 @@ function wcsv_process_monthly_sales(){
 	wp_die( json_encode( array( 'data' => $data_array ) ) );
 }
 add_action( 'wp_ajax_wcsv_monthly_sales', 'wcsv_process_monthly_sales' );
+
+function wcsv_process_unregistered_sales(){
+	$sales = wcsv_get_unregistered_visitor_sales('2015', '11', '2016', '01');
+	wp_die( json_encode( $sales ) );
+}
+add_action( 'wp_ajax_wcsv_nonregisted_sales', 'wcsv_process_unregistered_sales' );
+
+function wcsv_process_registered_sales(){
+	$sales = wcsv_get_top_users('2015', '11', '2016', '01' );
+	wp_die( json_encode( $sales ) );
+}
+add_action( 'wp_ajax_wcsv_registered_user_sales', 'wcsv_process_registered_sales' );
 
 /**
  * Get the sum totals of the top 20 products in a given time period.
@@ -162,10 +173,10 @@ function wcsv_get_days_with_orders( $start_year, $start_month, $end_year, $end_m
 }
 /**
  * Gets the totals sales per user. Adds all sales of non users into same array.
- * @param  [type] $start_year  [description]
- * @param  [type] $start_month [description]
- * @param  [type] $end_year    [description]
- * @param  [type] $end_month   [description]
+ * @param  int $start_year
+ * @param  int $start_month
+ * @param  int $end_year
+ * @param  int $end_month
  * @return array              Returns array of user ids, total sales, names and emails.
  */
 function wcsv_get_top_users( $start_year, $start_month, $end_year, $end_month ){
@@ -197,13 +208,27 @@ function wcsv_get_top_users( $start_year, $start_month, $end_year, $end_month ){
 	// add data for consistency so D3 knows how to display it.
 	$non_registered[0]['name'] = 'unregistered';
 	$non_registered[0]['user_ID'] = '0';
+	$non_registered[0]['action'] = '1';
 	$totals = array_merge( $users, $non_registered );
 	return $totals;
 }
+/**
+ * Gets the sales total based on visitor email.
+ * This current version uses the basic checkout form and expect ths email id to be 9.
+ * @param  int $start_year
+ * @param  int $start_month
+ * @param  int $end_year
+ * @param  int $end_month
+ * @return array              Returns array of total sales and emails.
+ * @todo append WPSC_TABLE_CHECKOUT_FORMS to query and get email based on email form field id.
+ */
 function wcsv_get_unregistered_visitor_sales( $start_year, $start_month, $end_year, $end_month ){
 	$start_time = mktime( 0, 0, 0, $start_month, 1, $start_year );
 	$end_time = mktime( 0, 0, 0, $end_month, 1, $end_year );
 	global $wpdb;
+
+	// uses this to manually change the email form ID. It's ugly I know, will be imrpoved.
+	$form_id = 9;
 
 	$non_registered = $wpdb->get_results( "SELECT
 		`forms`.value as name,
@@ -213,13 +238,23 @@ function wcsv_get_unregistered_visitor_sales( $start_year, $start_month, $end_ye
 			ON `forms`.`log_id` = `logs`.`id`
 		WHERE `logs`.`processed` >= 2
 			AND `logs`.`user_ID` = 0
-			AND `forms`.`form_id` = 9
+			AND `forms`.`form_id` = ".$form_id."
 			AND `logs`.`date` >= ".$start_time."
 			AND `logs`.`date` < ".$end_time."
 		GROUP BY `forms`.`value`
 	", ARRAY_A );
 	return $non_registered;
 }
+/**
+ * Gets the sales total per Category.
+ * @param  int $start_year
+ * @param  int $start_month
+ * @param  int $end_year
+ * @param  int $end_month
+ * @return array              Returns array of total sales and Category names.
+ * @todo improve the array to return tax term id to allow for drill down of best selling products in a category.
+ */
+
 function wcsv_get_sales_per_category( $start_year, $start_month, $end_year, $end_month ){
 	$start_time = mktime( 0, 0, 0, $start_month, 1, $start_year );
 	$end_time = mktime( 0, 0, 0, $end_month, 1, $end_year );
