@@ -43,28 +43,31 @@ function wcsv_register_scripts(){
 	if ( 'wpsc-product_page_wcsv_order_information' == $screen->id ) {
 		wp_enqueue_script( 'wcsv-d3', plugin_dir_url( __FILE__ ) . 'admin/assets/js/d3.min.js', '', '3.5.9', true );
 		wp_enqueue_script( 'wcsv', plugin_dir_url( __FILE__ ) . 'admin/assets/js/wcsv.js', array( 'wcsv-d3' ), '0.1', true );
+		wp_localize_script( 'wcsv', 'ajax_info', array( 'ajax_url' => admin_url( 'admin-ajax.php' ) ) );
 		wp_localize_script( 'wcsv', 'dataset', test_dataset() );
 	}
 }
 add_action( 'admin_enqueue_scripts', 'wcsv_register_scripts' );
 function test_dataset(){
-	$p1 = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1402 );
-	$p2 = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1404 );
-	$p3 = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1397 );
-	$p4 = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1407 );
-	$p5 = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1395 );
-	$p6 = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1412 );
-	$p7 = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1410 );
-	$combined = array_merge( $p1, $p2, $p3, $p4, $p5, $p6, $p7 );
-	$test_data = array();
 	$test_data['monthly'] = wcsv_get_monthly_sales_data( '2015', '11', '2015', '12' );
-	$test_data['days'] = wcsv_get_days_with_orders('2015', '11', '2015', '12', 1407 );
+	$test_data['days'] = wcsv_get_days_with_orders('2015', '11', '2015', '12' );
 	$test_data['users'] = wcsv_get_top_users('2015', '11', '2016', '01' );
 	$test_data['unregistered'] = wcsv_get_unregistered_visitor_sales('2015', '11', '2016', '01');
 	$test_data['categories'] = wcsv_get_sales_per_category('2015', '11', '2016', '01');
-	$test_data['combined'] = $combined;
 	return $test_data;
 }
+
+function wcsv_process_monthly_sales(){
+	$data = $_POST['products'];
+	$data_array = array();
+	foreach( $data as $product ){
+		$product_array = wcsv_get_days_with_orders( '2015', '11', '2015', '12', $product );
+		$data_array = array_merge($data_array, $product_array );
+	}
+	wp_die( json_encode( array( 'data' => $data_array ) ) );
+}
+add_action( 'wp_ajax_wcsv_monthly_sales', 'wcsv_process_monthly_sales' );
+
 /**
  * Get the sum totals of the top 20 products in a given time period.
  * @param  int $start_year

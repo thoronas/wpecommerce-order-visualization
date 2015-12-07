@@ -2,11 +2,43 @@
     'use strict';
 
     $(function() {
+		// demo data
 		render_pie_chart( dataset.monthly, "#report" );
 		render_pie_chart( dataset.users, "#users" );
 		render_pie_chart( dataset.unregistered, "#unregistered" );
 		render_pie_chart( dataset.categories, "#category-sales");
-		render_product_sales_graph_v2( dataset.combined, "#price-chart" );
+		render_product_sales_graph_v2( dataset.days, "#price-chart" );
+
+		$('#update-product-data').on( 'click', function(){
+			var selected_products = [];
+			var data = {
+				'action': 'wcsv_monthly_sales',
+				'products': ''
+			};
+			$('.test-selection .product-filter').each(function(){
+				var $that = $(this);
+				if ( $that.is(':checked') ){
+					selected_products.push( $that.val() );
+				}
+			});
+			// only run ajax if there are checkboxes set.
+			if(selected_products.length !== 0 ){
+				data.products = selected_products;
+				$.ajax({
+					type: 'POST',
+					url: ajax_info.ajax_url,
+					data: data,
+					dataType: "json",
+					success: function( response ) {
+						render_product_sales_graph_v2( response.data, "#price-chart" );
+					}
+				}).fail(function (response) {
+					if ( window.console && window.console.log ) {
+						console.log( response );
+					}
+				});
+			}
+		});
     });
 
 	function render_pie_chart( data, $selector ) {
@@ -141,7 +173,7 @@
 	}
 
 	function render_product_sales_graph_v2( dataset, $selector ) {
-
+		d3.select($selector).html("");
 		//Width and height
 		var margin = {top: 20, right: 150, bottom: 30, left: 50},
 		width = 900 - margin.left - margin.right,
@@ -179,11 +211,11 @@
 		  d.total = +d.total;
 
 		});
+
 		// Nest the entries by symbol
 	    var dataNest = d3.nest()
 	        .key(function(d) {return d.product;})
 	        .entries(dataset);
-
 	    var legendSpace = height/dataNest.length; // spacing for legend
 
 		x.domain(d3.extent(dataset, function(d) { return d.day; }));
@@ -214,7 +246,6 @@
 	            .attr("y", (legendSpace/2)+i*legendSpace)
 	            .attr("class", "legend")    // style the legend
 	            .text(d.key);
-
 		});
 
 		svg.append("g")
@@ -230,10 +261,6 @@
 			.attr("dy", ".71em")
 			.style("text-anchor", "end")
 			.text("Total Sales ($)");
-
-			// explanation of datum() vs data() found here: http://stackoverflow.com/a/13728584
-
-
 	}
 
 })(jQuery);
