@@ -36,13 +36,35 @@ add_filter( 'wpsc_additional_pages', 'wcscv_menu_extension', 10, 2 );
 function wcsv_register_subpage() {
 	include_once plugin_dir_path( __FILE__ ) . '/admin/orders-display.php';
 }
+/* this code is bullshit */
+function wcsv_datepicker_settings(){
+	add_settings_field(
+		'wcsv_date_picker',
+		'Sales Dates',
+		'wcsv_display_date_picker',
+		'wcsv_order_information',
+		'datepicker'
+	);
+ 	register_setting( 'datepicker', 'wcsv_date_picker' );
+}
+add_action( 'admin_init', 'wcsv_datepicker_settings' );
+function wcsv_display_date_picker($args){
+     extract( $args );
+     echo '<input type="date" id="wcsv-datepicker" name="wcsv-[datepicker]" value="" class="wcsv-datepicker datepicker" />';
+}
+/* this code is bullshit */
 
 function wcsv_register_scripts(){
 	$screen = get_current_screen();
 
 	if ( 'wpsc-product_page_wcsv_order_information' == $screen->id ) {
+
 		wp_enqueue_script( 'wcsv-d3', plugin_dir_url( __FILE__ ) . 'admin/assets/js/d3.min.js', '', '3.5.9', true );
-		wp_enqueue_script( 'wcsv', plugin_dir_url( __FILE__ ) . 'admin/assets/js/wcsv.js', array( 'wcsv-d3' ), '0.1', true );
+		wp_enqueue_script( 'wcsv', plugin_dir_url( __FILE__ ) . 'admin/assets/js/wcsv.js', array( 'wcsv-d3', 'jquery' ), '0.1', true );
+
+		wp_enqueue_style( 'jquery-ui-datepicker', 'https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css' );
+		wp_enqueue_script( 'wcsv-jquery-ui', 'https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js', array( 'jquery' ), '0.1', true );
+
 		wp_localize_script( 'wcsv', 'ajax_info', array( 'ajax_url' => admin_url( 'admin-ajax.php' ) ) );
 		wp_localize_script( 'wcsv', 'dataset', test_dataset() );
 	}

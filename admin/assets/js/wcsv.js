@@ -2,6 +2,9 @@
     'use strict';
 
     $(function() {
+
+		$( ".datepicker" ).datepicker();
+
 		// demo data
 		render_pie_chart( dataset.monthly, "#report" );
 		render_pie_chart( dataset.users, "#users" );

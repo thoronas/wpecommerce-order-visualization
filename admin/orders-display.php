@@ -30,6 +30,13 @@ polyline{
 <pre>
 </pre>
 <div class="wrap">
+	<form id="date-range">
+		<!-- <input type="date" id="date-range" name="date-range" value="" class="wpsc-datepicker datepicker" /> -->
+<p>Starting Date: <input type="text" id="start-date" class="datepicker"></p>
+<p>Ending Date: <input type="text" id="end-date" class="datepicker"></p>
+
+	</form>
+
 	<h2>Sales by Month</h2>
 	<div class="test-selection">
 	<?php
