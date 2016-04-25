@@ -2,13 +2,34 @@
     'use strict';
 
     $(function() {
-
+		// jQuery UI datepicker
 		$( ".datepicker" ).datepicker();
+
+		$('#get-sales-data').click( function(e){
+			e.preventDefault();
+			var $that = $(this);
+			var start_date = $('#start-date').val();
+			var end_date = $('#end-date').val();
+			var current_graph = $('.wpscv-tab.active').data('graph');
+			current_graph = current_graph.substr(1);
+			console.log( 'start: '+ start_date + ' end: '+ end_date + ' graph: ' + current_graph );
+
+		});
+
+		// Tab functionality
+		$('.wpscv-tab').on('click', function(e){
+			e.preventDefault();
+
+			var that = $(this);
+			var graph = that.data('graph');
+			that.addClass('active').siblings().removeClass('active');
+			$(graph).addClass('active').siblings().removeClass('active');
+		});
 
 		// demo data
 		render_pie_chart( dataset.monthly, "#report" );
 		render_pie_chart( dataset.users, "#users" );
-		render_pie_chart( dataset.categories, "#category-sales");
+		render_pie_chart( dataset.categories, "#categories");
 		render_product_sales_graph_v2( dataset.days, "#price-chart" );
 
 
@@ -16,14 +37,12 @@
 			var data = {
 				'action': 'wcsv_registered_user_sales',
 			};
-			console.log( data );
 			$.ajax({
 				type: 'POST',
 				url: ajax_info.ajax_url,
 				data: data,
 				dataType: "json",
 				success: function( response ) {
-					console.log(response);
 					render_pie_chart( response, "#users" );
 				}
 			}).fail(function (response) {

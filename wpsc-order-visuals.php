@@ -9,6 +9,18 @@
 **/
 
 /**
+ * Test Data
+ * @todo: Remove this code when user created dates are working.
+ */
+function test_dataset(){
+	$test_data['monthly'] = wcsv_get_monthly_sales_data( wcsv_return_timestamp('11/01/2015'), wcsv_return_timestamp('12/01/2015') );
+	$test_data['days'] = wcsv_get_days_with_orders( wcsv_return_timestamp('11/01/2015'), wcsv_return_timestamp('12/01/2015') );
+	$test_data['users'] = wcsv_get_top_users( wcsv_return_timestamp('11/01/2015'), wcsv_return_timestamp('01/01/2016') );
+	$test_data['categories'] = wcsv_get_sales_per_category( wcsv_return_timestamp('11/01/2015'), wcsv_return_timestamp('12/01/2015') );
+	return $test_data;
+}
+
+/**
  * Add submenu page to Products Page.
  * @param  array $page_hooks    array of submenu items.
  * @param  string $products_page path of parent page.
@@ -36,23 +48,6 @@ add_filter( 'wpsc_additional_pages', 'wcscv_menu_extension', 10, 2 );
 function wcsv_register_subpage() {
 	include_once plugin_dir_path( __FILE__ ) . '/admin/orders-display.php';
 }
-/* this code is bullshit */
-function wcsv_datepicker_settings(){
-	add_settings_field(
-		'wcsv_date_picker',
-		'Sales Dates',
-		'wcsv_display_date_picker',
-		'wcsv_order_information',
-		'datepicker'
-	);
- 	register_setting( 'datepicker', 'wcsv_date_picker' );
-}
-add_action( 'admin_init', 'wcsv_datepicker_settings' );
-function wcsv_display_date_picker($args){
-     extract( $args );
-     echo '<input type="date" id="wcsv-datepicker" name="wcsv-[datepicker]" value="" class="wcsv-datepicker datepicker" />';
-}
-/* this code is bullshit */
 
 function wcsv_register_scripts(){
 	$screen = get_current_screen();
@@ -61,6 +56,7 @@ function wcsv_register_scripts(){
 
 		wp_enqueue_script( 'wcsv-d3', plugin_dir_url( __FILE__ ) . 'admin/assets/js/d3.min.js', '', '3.5.9', true );
 		wp_enqueue_script( 'wcsv', plugin_dir_url( __FILE__ ) . 'admin/assets/js/wcsv.js', array( 'wcsv-d3', 'jquery' ), '0.1', true );
+		wp_enqueue_style( 'wcsv-styles', plugin_dir_url( __FILE__ ) . 'admin/assets/css/styles.css' );
 
 		wp_enqueue_style( 'jquery-ui-datepicker', 'https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css' );
 		wp_enqueue_script( 'wcsv-jquery-ui', 'https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js', array( 'jquery' ), '0.1', true );
@@ -70,36 +66,43 @@ function wcsv_register_scripts(){
 	}
 }
 add_action( 'admin_enqueue_scripts', 'wcsv_register_scripts' );
-function test_dataset(){
-	$test_data['monthly'] = wcsv_get_monthly_sales_data( '2015', '11', '2015', '12' );
-	$test_data['days'] = wcsv_get_days_with_orders('2015', '11', '2015', '12' );
-	$test_data['users'] = wcsv_get_top_users('2015', '11', '2016', '01' );
-	$test_data['categories'] = wcsv_get_sales_per_category('2015', '11', '2016', '01');
-	return $test_data;
-}
 
+/**
+ * Monthly Sales function called via wp_ajax
+ */
 function wcsv_process_monthly_sales(){
 	$data = $_POST['products'];
 	$data_array = array();
 	foreach( $data as $product ){
-		$product_array = wcsv_get_days_with_orders( '2015', '11', '2015', '12', $product );
+		$product_array = wcsv_get_days_with_orders( wcsv_return_timestamp('11/01/2015'), wcsv_return_timestamp('12/01/2015'), $product );
 		$data_array = array_merge($data_array, $product_array );
 	}
 	wp_die( json_encode( array( 'data' => $data_array ) ) );
 }
 add_action( 'wp_ajax_wcsv_monthly_sales', 'wcsv_process_monthly_sales' );
 
+/**
+ * Unregistered user sales called via wp_ajax
+ */
 function wcsv_process_unregistered_sales(){
-	$sales = wcsv_get_unregistered_visitor_sales('2015', '11', '2016', '01');
+	$sales = wcsv_get_unregistered_visitor_sales( wcsv_return_timestamp('11/01/2015'), wcsv_return_timestamp('01/01/2016'));
 	wp_die( json_encode( $sales ) );
 }
 add_action( 'wp_ajax_wcsv_nonregisted_sales', 'wcsv_process_unregistered_sales' );
 
+/**
+ * Registered user sales called via wp_ajax
+ */
 function wcsv_process_registered_sales(){
-	$sales = wcsv_get_top_users('2015', '11', '2016', '01' );
+	$sales = wcsv_get_top_users( wcsv_return_timestamp('11/01/2015'), wcsv_return_timestamp('01/01/2016') );
 	wp_die( json_encode( $sales ) );
 }
 add_action( 'wp_ajax_wcsv_registered_user_sales', 'wcsv_process_registered_sales' );
+
+function wcsv_return_timestamp( $raw_date ){
+	$date = new DateTime( $raw_date );
+	return $date->getTimestamp();
+}
 
 /**
  * Get the sum totals of the top 20 products in a given time period.
@@ -109,11 +112,8 @@ add_action( 'wp_ajax_wcsv_registered_user_sales', 'wcsv_process_registered_sales
  * @param  int $end_month
  * @return array              array of products and their sales totals
  */
-function wcsv_get_monthly_sales_data( $start_year, $start_month, $end_year, $end_month ){
+function wcsv_get_monthly_sales_data( $start_time, $end_time ){
 	global $wpdb;
-
-	$start_time = mktime( 0, 0, 0, $start_month, 1, $start_year );
-	$end_time = mktime( 0, 0, 0, $end_month, 1, $end_year );
 
 	$products = $wpdb->get_results( "SELECT `cart`.`prodid`,
 	 `cart`.`name` as `name`,
@@ -141,9 +141,8 @@ function wcsv_get_monthly_sales_data( $start_year, $start_month, $end_year, $end
  * @param  int $end_month
  * @return array            returns multidimensional array of days with total orders per day.
  */
-function wcsv_get_days_with_orders( $start_year, $start_month, $end_year, $end_month, $prodid = 0 ){
-	$start_time = mktime( 0, 0, 0, $start_month, 1, $start_year );
-	$end_time = mktime( 0, 0, 0, $end_month, 1, $end_year );
+function wcsv_get_days_with_orders( $start_time, $end_time, $prodid = 0 ){
+
 	$days_totals = array();
 	$prodid = absint( $prodid );
 	global $wpdb;
@@ -175,8 +174,11 @@ function wcsv_get_days_with_orders( $start_year, $start_month, $end_year, $end_m
 	 * If there are orders query the total sum of those orders.
 	 */
 	for ( $i = $start_time; $i < $end_time; $i = $i + 86400 ) {
-		// convert unix time stamp to day of month.
-		$day_number = date( 'd', $i );
+		$date = new DateTime();
+		$date->setTimestamp( $i );
+
+		$day_number = $date->format( 'd' );
+
 		$order_total =  0;
 		// loop through all orders and add any purchases to current day.
 		foreach ( $dayswithorders as $day ) {
@@ -184,9 +186,9 @@ function wcsv_get_days_with_orders( $start_year, $start_month, $end_year, $end_m
 				$order_total += $day['totalprice'];
 			}
 		}
-
+		// this structure is for D3. Expects the JSON in this format. 
 		$days_totals[] = array(
-			'day'   => $start_year.'-'.$start_month.'-'.$day_number,
+			'day'   => $date->format( 'Y' ).'-'.$date->format( 'm' ).'-'.$day_number,
 			'total' => $order_total,
 			'product' => ( empty( $prodid ) ? 'total' : get_the_title($prodid)  )
 		);
@@ -201,9 +203,8 @@ function wcsv_get_days_with_orders( $start_year, $start_month, $end_year, $end_m
  * @param  int $end_month
  * @return array              Returns array of user ids, total sales, names and emails.
  */
-function wcsv_get_top_users( $start_year, $start_month, $end_year, $end_month ){
-	$start_time = mktime( 0, 0, 0, $start_month, 1, $start_year );
-	$end_time = mktime( 0, 0, 0, $end_month, 1, $end_year );
+function wcsv_get_top_users( $start_time, $end_time ){
+
 	global $wpdb;
 	$users = $wpdb->get_results( "SELECT `logs`.`user_ID`,
 		SUM(`logs`.`totalprice`) as `sale_totals`,
@@ -244,9 +245,8 @@ function wcsv_get_top_users( $start_year, $start_month, $end_year, $end_month ){
  * @return array              Returns array of total sales and emails.
  * @todo append WPSC_TABLE_CHECKOUT_FORMS to query and get email based on email form field id.
  */
-function wcsv_get_unregistered_visitor_sales( $start_year, $start_month, $end_year, $end_month ){
-	$start_time = mktime( 0, 0, 0, $start_month, 1, $start_year );
-	$end_time = mktime( 0, 0, 0, $end_month, 1, $end_year );
+function wcsv_get_unregistered_visitor_sales( $start_time, $end_time ){
+
 	global $wpdb;
 
 	// uses this to manually change the email form ID. It's ugly I know, will be imrpoved.
@@ -277,9 +277,8 @@ function wcsv_get_unregistered_visitor_sales( $start_year, $start_month, $end_ye
  * @todo improve the array to return tax term id to allow for drill down of best selling products in a category.
  */
 
-function wcsv_get_sales_per_category( $start_year, $start_month, $end_year, $end_month ){
-	$start_time = mktime( 0, 0, 0, $start_month, 1, $start_year );
-	$end_time = mktime( 0, 0, 0, $end_month, 1, $end_year );
+function wcsv_get_sales_per_category( $start_time, $end_time ){
+
 	global $wpdb;
 	$categories = $wpdb->get_results( "SELECT
 		SUM(`cart`.`price` * `cart`.`quantity`) as `sale_totals`,
