@@ -48,7 +48,7 @@ polyline{
 	<div class="wpscv-graphs">
 		<div id="sales-dates" class="graph active">
 			<h2>Sales Over Time</h2>
-			<div class="test-selection">
+			<div class="product-selection">
 			<?php
 			$post_args = array(
 				'post_type' => 'wpsc-product'

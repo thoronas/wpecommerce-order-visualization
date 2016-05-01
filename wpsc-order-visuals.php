@@ -71,10 +71,12 @@ add_action( 'admin_enqueue_scripts', 'wcsv_register_scripts' );
  * Monthly Sales function called via wp_ajax
  */
 function wcsv_process_monthly_sales(){
+	$start_date = $_POST['start_date'];
+	$end_date = $_POST['end_date'];
 	$data = $_POST['products'];
 	$data_array = array();
 	foreach( $data as $product ){
-		$product_array = wcsv_get_days_with_orders( wcsv_return_timestamp('11/01/2015'), wcsv_return_timestamp('12/01/2015'), $product );
+		$product_array = wcsv_get_days_with_orders( wcsv_return_timestamp($start_date), wcsv_return_timestamp($end_date), $product );
 		$data_array = array_merge($data_array, $product_array );
 	}
 	wp_die( json_encode( array( 'data' => $data_array ) ) );
@@ -98,6 +100,33 @@ function wcsv_process_registered_sales(){
 	wp_die( json_encode( $sales ) );
 }
 add_action( 'wp_ajax_wcsv_registered_user_sales', 'wcsv_process_registered_sales' );
+
+function wcsv_get_sales_data() {
+	$start_date = $_POST['start_date'];
+	$end_date = $_POST['end_date'];
+	$graph_type = $_POST['current_graph'];
+	switch ( $graph_type ) {
+		case "sales-dates":
+			$data = array("sales-dates");
+			$data[] = wcsv_get_days_with_orders( wcsv_return_timestamp($start_date), wcsv_return_timestamp($end_date));
+			break;
+		case "category-sales":
+			$data = array("category-sales");
+			$data[] = wcsv_get_sales_per_category( wcsv_return_timestamp($start_date), wcsv_return_timestamp($end_date));
+			break;
+		case "top-products":
+			$data = array("top-products");
+			$data[] = wcsv_get_monthly_sales_data( wcsv_return_timestamp($start_date), wcsv_return_timestamp($end_date));
+			break;
+		case "user-sales":
+			$data = array("user-sales");
+			$data[] = wcsv_get_top_users( wcsv_return_timestamp($start_date), wcsv_return_timestamp($end_date));
+			break;
+
+	}
+	wp_die( json_encode( $data ) );
+}
+add_action( 'wp_ajax_get_sales_data', 'wcsv_get_sales_data' );
 
 function wcsv_return_timestamp( $raw_date ){
 	$date = new DateTime( $raw_date );
@@ -186,7 +215,7 @@ function wcsv_get_days_with_orders( $start_time, $end_time, $prodid = 0 ){
 				$order_total += $day['totalprice'];
 			}
 		}
-		// this structure is for D3. Expects the JSON in this format. 
+		// this structure is for D3. Expects the JSON in this format.
 		$days_totals[] = array(
 			'day'   => $date->format( 'Y' ).'-'.$date->format( 'm' ).'-'.$day_number,
 			'total' => $order_total,

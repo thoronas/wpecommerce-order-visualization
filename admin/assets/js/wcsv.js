@@ -12,8 +12,41 @@
 			var end_date = $('#end-date').val();
 			var current_graph = $('.wpscv-tab.active').data('graph');
 			current_graph = current_graph.substr(1);
-			console.log( 'start: '+ start_date + ' end: '+ end_date + ' graph: ' + current_graph );
 
+			var data = {
+				'action'        : 'get_sales_data',
+				'start_date'    : start_date,
+				'end_date'      : end_date,
+				'current_graph' : current_graph,
+			};
+			$.ajax({
+				type: 'POST',
+				url: ajax_info.ajax_url,
+				data: data,
+				dataType: "json",
+				success: function( response ) {
+					var $graph = response[0];
+					var $sales_data = response[1];
+					switch ( $graph ) {
+						case "sales-dates":
+							render_product_sales_graph_v2( $sales_data, "#price-chart" );
+							break;
+						case "category-sales":
+							render_pie_chart( $sales_data, "#categories");
+							break;
+						case "top-products":
+							render_pie_chart( $sales_data, "#report" );
+							break;
+						case "user-sales":
+							render_pie_chart( $sales_data, "#users" );
+							break;
+					}
+				}
+			}).fail(function (response) {
+				if ( window.console && window.console.log ) {
+					console.log( response );
+				}
+			});
 		});
 
 		// Tab functionality
@@ -54,11 +87,15 @@
 
 		$('#update-product-data').on( 'click', function(){
 			var selected_products = [];
+			var start_date = $('#start-date').val();
+			var end_date = $('#end-date').val();
 			var data = {
-				'action': 'wcsv_monthly_sales',
-				'products': ''
+				'action'     : 'wcsv_monthly_sales',
+				'products'   : '',
+				'start_date' : start_date,
+				'end_date'   : end_date
 			};
-			$('.test-selection .product-filter').each(function(){
+			$('.product-selection .product-filter').each(function(){
 				var $that = $(this);
 				if ( $that.is(':checked') ){
 					selected_products.push( $that.val() );
