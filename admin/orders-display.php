@@ -50,6 +50,9 @@ polyline{
 			<h2>Sales Over Time</h2>
 			<div class="product-selection">
 			<?php
+			/*
+			 * @todo: develop a better way to get a list of products for checkbox/select
+			 */
 			$post_args = array(
 				'post_type' => 'wpsc-product'
 			);

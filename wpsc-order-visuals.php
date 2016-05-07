@@ -9,15 +9,17 @@
 **/
 
 /**
- * Test Data
- * @todo: Remove this code when user created dates are working.
+ * Get sales data from the last 30 days.
+ * Used on page load to provide data to start with.
  */
-function test_dataset(){
-	$test_data['monthly'] = wcsv_get_monthly_sales_data( wcsv_return_timestamp('11/01/2015'), wcsv_return_timestamp('12/01/2015') );
-	$test_data['days'] = wcsv_get_days_with_orders( wcsv_return_timestamp('11/01/2015'), wcsv_return_timestamp('12/01/2015') );
-	$test_data['users'] = wcsv_get_top_users( wcsv_return_timestamp('11/01/2015'), wcsv_return_timestamp('01/01/2016') );
-	$test_data['categories'] = wcsv_get_sales_per_category( wcsv_return_timestamp('11/01/2015'), wcsv_return_timestamp('12/01/2015') );
-	return $test_data;
+function current_dataset(){
+	$end_date = strtotime('now');
+	$start_date = strtotime("-30 days");
+	$current_data['monthly'] = wcsv_get_monthly_sales_data( $start_date, $end_date );
+	$current_data['days'] = wcsv_get_days_with_orders( $start_date, $end_date );
+	$current_data['users'] = wcsv_get_top_users( $start_date, $end_date );
+	$current_data['categories'] = wcsv_get_sales_per_category( $start_date, $end_date );
+	return $current_data;
 }
 
 /**
@@ -62,21 +64,34 @@ function wcsv_register_scripts(){
 		wp_enqueue_script( 'wcsv-jquery-ui', 'https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js', array( 'jquery' ), '0.1', true );
 
 		wp_localize_script( 'wcsv', 'ajax_info', array( 'ajax_url' => admin_url( 'admin-ajax.php' ) ) );
-		wp_localize_script( 'wcsv', 'dataset', test_dataset() );
+		wp_localize_script( 'wcsv', 'dataset', current_dataset() );
 	}
 }
 add_action( 'admin_enqueue_scripts', 'wcsv_register_scripts' );
-
+function wcsv_process_start_date( $raw_date ) {
+	if( $raw_date ){
+		return wcsv_return_timestamp( $raw_date );
+	} else {
+		return strtotime("-30 days");
+	}
+}
+function wcsv_process_end_date( $raw_date ) {
+	if( $raw_date ){
+		return wcsv_return_timestamp( $raw_date );
+	} else {
+		return strtotime("now");
+	}
+}
 /**
  * Monthly Sales function called via wp_ajax
  */
 function wcsv_process_monthly_sales(){
-	$start_date = $_POST['start_date'];
-	$end_date = $_POST['end_date'];
+	$start_date = wcsv_process_start_date( $_POST['start_date'] );
+	$end_date = wcsv_process_end_date( $_POST['end_date'] );
 	$data = $_POST['products'];
 	$data_array = array();
 	foreach( $data as $product ){
-		$product_array = wcsv_get_days_with_orders( wcsv_return_timestamp($start_date), wcsv_return_timestamp($end_date), $product );
+		$product_array = wcsv_get_days_with_orders( $start_date, $end_date, $product );
 		$data_array = array_merge($data_array, $product_array );
 	}
 	wp_die( json_encode( array( 'data' => $data_array ) ) );
@@ -87,7 +102,9 @@ add_action( 'wp_ajax_wcsv_monthly_sales', 'wcsv_process_monthly_sales' );
  * Unregistered user sales called via wp_ajax
  */
 function wcsv_process_unregistered_sales(){
-	$sales = wcsv_get_unregistered_visitor_sales( wcsv_return_timestamp('11/01/2015'), wcsv_return_timestamp('01/01/2016'));
+	$start_date = wcsv_process_start_date( $_POST['start_date'] );
+	$end_date = wcsv_process_end_date( $_POST['end_date'] );
+	$sales = wcsv_get_unregistered_visitor_sales( $start_date, $end_date );
 	wp_die( json_encode( $sales ) );
 }
 add_action( 'wp_ajax_wcsv_nonregisted_sales', 'wcsv_process_unregistered_sales' );
@@ -96,31 +113,33 @@ add_action( 'wp_ajax_wcsv_nonregisted_sales', 'wcsv_process_unregistered_sales' 
  * Registered user sales called via wp_ajax
  */
 function wcsv_process_registered_sales(){
-	$sales = wcsv_get_top_users( wcsv_return_timestamp('11/01/2015'), wcsv_return_timestamp('01/01/2016') );
+	$start_date = wcsv_process_start_date( $_POST['start_date'] );
+	$end_date = wcsv_process_end_date( $_POST['end_date'] );
+	$sales = wcsv_get_top_users( $start_date, $end_date );
 	wp_die( json_encode( $sales ) );
 }
 add_action( 'wp_ajax_wcsv_registered_user_sales', 'wcsv_process_registered_sales' );
 
 function wcsv_get_sales_data() {
-	$start_date = $_POST['start_date'];
-	$end_date = $_POST['end_date'];
+	$start_date = wcsv_process_start_date( $_POST['start_date'] );
+	$end_date = wcsv_process_end_date( $_POST['end_date'] );
 	$graph_type = $_POST['current_graph'];
 	switch ( $graph_type ) {
 		case "sales-dates":
 			$data = array("sales-dates");
-			$data[] = wcsv_get_days_with_orders( wcsv_return_timestamp($start_date), wcsv_return_timestamp($end_date));
+			$data[] = wcsv_get_days_with_orders( $start_date, $end_date );
 			break;
 		case "category-sales":
 			$data = array("category-sales");
-			$data[] = wcsv_get_sales_per_category( wcsv_return_timestamp($start_date), wcsv_return_timestamp($end_date));
+			$data[] = wcsv_get_sales_per_category( $start_date, $end_date );
 			break;
 		case "top-products":
 			$data = array("top-products");
-			$data[] = wcsv_get_monthly_sales_data( wcsv_return_timestamp($start_date), wcsv_return_timestamp($end_date));
+			$data[] = wcsv_get_monthly_sales_data( $start_date, $end_date );
 			break;
 		case "user-sales":
 			$data = array("user-sales");
-			$data[] = wcsv_get_top_users( wcsv_return_timestamp($start_date), wcsv_return_timestamp($end_date));
+			$data[] = wcsv_get_top_users( $start_date, $end_date );
 			break;
 
 	}
@@ -247,6 +266,7 @@ function wcsv_get_top_users( $start_time, $end_time ){
 			AND `logs`.`date` < ".$end_time."
 		GROUP BY `logs`.`user_ID`
 		LIMIT 20", ARRAY_A );
+
 	 $non_registered = $wpdb->get_results( "SELECT
 		SUM(`logs`.`totalprice`) as `sale_totals`
 		FROM `" . WPSC_TABLE_PURCHASE_LOGS . "` AS `logs`
@@ -257,12 +277,16 @@ function wcsv_get_top_users( $start_time, $end_time ){
 		GROUP BY `logs`.`user_ID`
 		LIMIT 20", ARRAY_A );
 
-	// add data for consistency so D3 knows how to display it.
-	$non_registered[0]['name'] = 'unregistered';
-	$non_registered[0]['user_ID'] = '0';
-	$non_registered[0]['action'] = '1';
-	$totals = array_merge( $users, $non_registered );
-	return $totals;
+	if( $non_registered ) {
+		// add data for consistency so D3 knows how to display it.
+		$non_registered[0]['name'] = 'unregistered';
+		$non_registered[0]['user_ID'] = '0';
+		$non_registered[0]['action'] = '1';
+		$totals = array_merge( $users, $non_registered );
+		return $totals;
+	} else {
+		return $users;
+	}
 }
 /**
  * Gets the sales total based on visitor email.

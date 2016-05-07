@@ -20,10 +20,10 @@
 				'current_graph' : current_graph,
 			};
 			$.ajax({
-				type: 'POST',
-				url: ajax_info.ajax_url,
-				data: data,
-				dataType: "json",
+				type		: 'POST',
+				url			: ajax_info.ajax_url,
+				data		: data,
+				dataType	: "json",
 				success: function( response ) {
 					var $graph = response[0];
 					var $sales_data = response[1];
@@ -67,14 +67,18 @@
 
 
 		$('#users').on( 'click', '#get_registered_users', function(){
+			var start_date = $('#start-date').val();
+			var end_date = $('#end-date').val();
 			var data = {
-				'action': 'wcsv_registered_user_sales',
+				'action'		: 'wcsv_registered_user_sales',
+				'start_date'    : start_date,
+				'end_date'      : end_date,
 			};
 			$.ajax({
-				type: 'POST',
-				url: ajax_info.ajax_url,
-				data: data,
-				dataType: "json",
+				type		: 'POST',
+				url			: ajax_info.ajax_url,
+				data		: data,
+				dataType	: "json",
 				success: function( response ) {
 					render_pie_chart( response, "#users" );
 				}
@@ -105,10 +109,10 @@
 			if(selected_products.length !== 0 ){
 				data.products = selected_products;
 				$.ajax({
-					type: 'POST',
-					url: ajax_info.ajax_url,
-					data: data,
-					dataType: "json",
+					type		: 'POST',
+					url			: ajax_info.ajax_url,
+					data		: data,
+					dataType	: "json",
 					success: function( response ) {
 						render_product_sales_graph_v2( response.data, "#price-chart" );
 					}
@@ -350,14 +354,17 @@
 	}
 
 	function get_unregistered_users(selector){
-		console.log(selector);
+		var start_date = $('#start-date').val();
+		var end_date = $('#end-date').val();
 		var data = {
-			'action': 'wcsv_nonregisted_sales',
+			'action'		: 'wcsv_nonregisted_sales',
+			'start_date'    : start_date,
+			'end_date'      : end_date,
 		};
 		$.ajax({
-			type: 'POST',
-			url: ajax_info.ajax_url,
-			data: data,
+			type	: 'POST',
+			url		: ajax_info.ajax_url,
+			data	: data,
 			dataType: "json",
 			success: function( response ) {
 				render_pie_chart( response, selector );
