@@ -49,21 +49,25 @@
 			});
 		});
 
+
+
 		// Tab functionality
 		$('.wpscv-tab').on('click', function(e){
 			e.preventDefault();
-
 			var that = $(this);
 			var graph = that.data('graph');
 			that.addClass('active').siblings().removeClass('active');
 			$(graph).addClass('active').siblings().removeClass('active');
 		});
 
+		// console.log(dataset);
+
 		// demo data
-		render_pie_chart( dataset.monthly, "#report" );
-		render_pie_chart( dataset.users, "#users" );
-		render_pie_chart( dataset.categories, "#categories");
-		render_product_sales_graph_v2( dataset.days, "#price-chart" );
+		// d3 functions
+		// render_pie_chart( dataset.monthly, "#report" );
+		// render_pie_chart( dataset.users, "#users" );
+		// render_pie_chart( dataset.categories, "#categories");
+		render_product_sales_graph_v2( dataset.days, $('#price-chart') );
 
 
 		$('#users').on( 'click', '#get_registered_users', function(){
@@ -80,7 +84,9 @@
 				data		: data,
 				dataType	: "json",
 				success: function( response ) {
-					render_pie_chart( response, "#users" );
+					//render_pie_chart( response, "#users" );
+					console.log(response);
+
 				}
 			}).fail(function (response) {
 				if ( window.console && window.console.log ) {
@@ -114,7 +120,7 @@
 					data		: data,
 					dataType	: "json",
 					success: function( response ) {
-						render_product_sales_graph_v2( response.data, "#price-chart" );
+						render_product_sales_graph_v2( response.data, $('#price-chart') );
 					}
 				}).fail(function (response) {
 					if ( window.console && window.console.log ) {
@@ -262,95 +268,43 @@
 	}
 
 	function render_product_sales_graph_v2( dataset, $selector ) {
-		// clear old svgs.
-		d3.select($selector).html("");
-		//Width and height
-		var margin = {top: 20, right: 150, bottom: 30, left: 50},
-		width = 900 - margin.left - margin.right,
-		height = 400 - margin.top - margin.bottom;
-		// need to parse date into format D3 can read.
-		var parseDate = d3.time.format("%Y-%m-%d").parse;
-		// set the ranges. Uses SVG dimensions.
-		var x = d3.time.scale()
-			.range([0, width]);
-		var y = d3.scale.linear()
-			.range([height, 0]);
-		// Draw the line based on data.
-		var line = d3.svg.line()
-			.x(function(d) { return x(d.day); })
-			.y(function(d) { return y(d.total); });
-		//
-		var xAxis = d3.svg.axis()
-			.scale(x)
-			.orient("bottom");
-		var yAxis = d3.svg.axis()
-			.scale(y)
-			.orient("left");
-		var svg = d3.select($selector)
-			.append("svg")
-			.attr("width", width + margin.left + margin.right)
-			.attr("height", height + margin.top + margin.bottom)
-			.append("g")
-			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-	    var color = d3.scale.category10();   // set the colour scale
+		// var ctx = $('#price-chart');
+		$selector.html('').siblings('.chartjs-hidden-iframe').remove();
+		var data = {
+			labels : dataset[0].day_labels,
+			datasets: []
+		};
 
-		// go through dataset and parse date.
-		dataset.forEach(function(d) {
-		  d.day = parseDate(d.day);
-		  //convert total to number.
-		  d.total = +d.total;
-
+		// pass the details for each set of sales data as a dataset
+		// TODO: add custom colors for different lines.
+		dataset.forEach( function(el){
+			data.datasets.push({
+	            label: el.product_label,
+	            data: el.days_income,
+	            fill: false,
+	            lineTension: 0.1,
+	            backgroundColor: "rgba(75,192,192,0.4)",
+	            borderColor: "rgba(75,192,192,1)",
+	            borderCapStyle: 'butt',
+	            borderDash: [],
+	            borderDashOffset: 0.0,
+	            borderJoinStyle: 'miter',
+	            pointBorderColor: "rgba(75,192,192,1)",
+	            pointBackgroundColor: "#fff",
+	            pointBorderWidth: 1,
+	            pointHoverRadius: 5,
+	            pointHoverBackgroundColor: "rgba(75,192,192,1)",
+	            pointHoverBorderColor: "rgba(220,220,220,1)",
+	            pointHoverBorderWidth: 2,
+	            pointRadius: 1,
+	            pointHitRadius: 10,
+			});
+		} );
+		// create the line chart
+		var myLineChart = new Chart($selector, {
+		    type: 'line',
+		    data: data
 		});
-
-		// Nest the entries by symbol
-	    var dataNest = d3.nest()
-	        .key(function(d) {return d.product;})
-	        .entries(dataset);
-	    var legendSpace = height/dataNest.length; // spacing for legend
-
-		x.domain(d3.extent(dataset, function(d) { return d.day; }));
-		y.domain(d3.extent(dataset, function(d) { return d.total; }));
-		dataNest.forEach( function(d,i){
-			svg.append("path")
-				.attr("class", "line"+d.key)
-				.style("stroke", function() {
-					// Add the colours dynamically
-                	return color(d.key);
-				})
-				.style("fill", "none")
-				.attr("d", line(d.values));
-
-			// add legend color box.
-			svg.append("rect")
-				.attr("x", width + 10) // spacing
-				.attr("y", (legendSpace/2)+i*legendSpace - 7)
-				.attr("width", 5)
-				.attr("height", 5)
-				.style("fill", function() { // dynamic colours
-	                return color(d.key);
-				});
-
-			// Add the Legend
-	        svg.append("text")
-	            .attr("x", width + 17) // spacing
-	            .attr("y", (legendSpace/2)+i*legendSpace)
-	            .attr("class", "legend")    // style the legend
-	            .text(d.key);
-		});
-
-		svg.append("g")
-			.attr("class", "x axis")
-			.attr("transform", "translate(0," + height + ")")
-			.call(xAxis);
-		svg.append("g")
-			.attr("class", "y axis")
-			.call(yAxis)
-		  .append("text")
-			.attr("transform", "rotate(-90)")
-			.attr("y", 6)
-			.attr("dy", ".71em")
-			.style("text-anchor", "end")
-			.text("Total Sales ($)");
 	}
 
 	function get_unregistered_users(selector){

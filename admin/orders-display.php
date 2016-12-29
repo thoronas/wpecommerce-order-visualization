@@ -76,7 +76,7 @@ polyline{
 			?>
 			<button id="update-product-data" class="button">Update Chart</button>
 			</div>
-			<div class="sales-svg" id="price-chart"></div>
+			<canvas class="sales-svg" id="price-chart"></canvas>
 		</div>
 		<div id="category-sales" class="graph">
 			<h2>Sales By Category</h2>

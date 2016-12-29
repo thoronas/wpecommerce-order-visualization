@@ -56,8 +56,11 @@ function wcsv_register_scripts(){
 
 	if ( 'wpsc-product_page_wcsv_order_information' == $screen->id ) {
 
-		wp_enqueue_script( 'wcsv-d3', plugin_dir_url( __FILE__ ) . 'admin/assets/js/d3.min.js', '', '3.5.9', true );
-		wp_enqueue_script( 'wcsv', plugin_dir_url( __FILE__ ) . 'admin/assets/js/wcsv.js', array( 'wcsv-d3', 'jquery' ), '0.1', true );
+		// wp_enqueue_script( 'wcsv-d3', plugin_dir_url( __FILE__ ) . 'admin/assets/js/d3.min.js', '', '3.5.9', true );
+
+		wp_enqueue_script( 'wcsv-chart', 'http://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.bundle.min.js', '', '0.6', true );
+
+		wp_enqueue_script( 'wcsv', plugin_dir_url( __FILE__ ) . 'admin/assets/js/wcsv.js', array( 'jquery' ), '0.1', true );
 		wp_enqueue_style( 'wcsv-styles', plugin_dir_url( __FILE__ ) . 'admin/assets/css/styles.css' );
 
 		wp_enqueue_style( 'jquery-ui-datepicker', 'https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css' );
@@ -216,7 +219,8 @@ function wcsv_get_days_with_orders( $start_time, $end_time, $prodid = 0 ){
 	}
 
 	$dayswithorders = $wpdb->get_results( $compiled_string , ARRAY_A);
-
+	$day_labels = array();
+	$day_income = array();
 	/**
 	 * Loop through every day in the time period specified.
 	 * If there are orders query the total sum of those orders.
@@ -234,13 +238,21 @@ function wcsv_get_days_with_orders( $start_time, $end_time, $prodid = 0 ){
 				$order_total += $day['totalprice'];
 			}
 		}
+		// $day_labels[] = $day_number;
+		$day_labels[] = $date->format( 'Y' ).'-'.$date->format( 'm' ).'-'.$day_number;
+		$day_income[] = $order_total;
 		// this structure is for D3. Expects the JSON in this format.
-		$days_totals[] = array(
-			'day'   => $date->format( 'Y' ).'-'.$date->format( 'm' ).'-'.$day_number,
-			'total' => $order_total,
-			'product' => ( empty( $prodid ) ? 'total' : get_the_title($prodid)  )
-		);
+		// $days_totals[] = array(
+		// 	'day'   => $date->format( 'Y' ).'-'.$date->format( 'm' ).'-'.$day_number,
+		// 	'total' => $order_total,
+		// 	'product' => ( empty( $prodid ) ? 'total' : get_the_title($prodid)  )
+		// );
 	}
+	$product_label = ( empty( $prodid ) ? 'total' : get_the_title($prodid)  );
+	$days_totals[$prodid]['day_labels'] = $day_labels;
+	$days_totals[$prodid]['days_income'] = $day_income;
+	$days_totals[$prodid]['product_label'] = $product_label;
+
 	return $days_totals;
 }
 /**
