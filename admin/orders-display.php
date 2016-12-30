@@ -80,15 +80,15 @@ polyline{
 		</div>
 		<div id="category-sales" class="graph">
 			<h2>Sales By Category</h2>
-			<div class="sales-svg pie" id="categories"></div>
+			<canvas class="sales-svg pie" id="categories"></canvas>
 		</div>
 		<div id="top-products" class="graph">
 			<h2>Top Products</h2>
-			<div class="sales-svg pie" id="report"></div>
+			<canvas class="sales-svg pie" id="report"></canvas>
 		</div>
 		<div id="user-sales" class="graph">
 			<h2 class="user-sales">Sales by User</h2>
-			<div class="sales-svg pie" id="users"></div>
+			<canvas class="sales-svg pie" id="users"></canvas>
 		</div>
 	</div>
 </div>

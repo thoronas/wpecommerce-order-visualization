@@ -64,9 +64,9 @@
 
 		// demo data
 		// d3 functions
-		// render_pie_chart( dataset.monthly, "#report" );
-		// render_pie_chart( dataset.users, "#users" );
-		// render_pie_chart( dataset.categories, "#categories");
+		render_pie_chart( dataset.monthly, $("#report") );
+		render_pie_chart( dataset.users, $("#users") );
+		render_pie_chart( dataset.categories, $("#categories") );
 		render_product_sales_graph_v2( dataset.days, $('#price-chart') );
 
 
@@ -131,143 +131,32 @@
 		});
     });
 
-	function render_pie_chart( data, $selector ) {
-		d3.select($selector).html("");
+	function render_pie_chart( dataset, $selector ) {
+		console.log(dataset);
+		var data_array = [];
+		var data_labels = [];
 
-		var width = 400,
-		    height = 450,
-			radius = Math.min(width, height) / 2;
-		// w should be divided by 2 to make proper pie chart
-        var outerRadius = width;
-		var svg = d3.select( $selector )
-			.append("svg")
-			.append("g")
-			.attr("transform", "translate(" + outerRadius + "," + outerRadius / 2 + ")");
-
-		svg.append("g")
-			.attr("class", "slices");
-		svg.append("g")
-			.attr("class", "labels");
-		svg.append("g")
-			.attr("class", "lines");
-
-		var pie = d3.layout.pie()
-			.value(function(d) {
-				return d.sale_totals;
-			}).sort(d3.ascending);
-		var arc = d3.svg.arc()
-			// .outerRadius(radius * 0.8)
-			// .innerRadius(radius * 0.4);
-			.outerRadius(radius * 0.8)
-			.innerRadius(0);
-		var outerArc = d3.svg.arc()
-			.innerRadius(radius * 0.85)
-			.outerRadius(radius * 0.85);
-
-		// svg.attr("transform", "translate(" + width / 2 + ",500)");
-
-		var key = function(d){ return d.data.name; };
-
-		var color = d3.scale.category20();
-
-		/* ------- PIE SLICES -------*/
-		var slice = svg.select(".slices").selectAll("path.slice")
-			.data(pie(data), key);
-
-		slice.enter()
-			.insert("path")
-			.style("fill", function(d) { return color(d.data.name); })
-			.attr("class", "slice");
-
-		slice
-			.transition().duration(1000)
-			.attrTween("d", function(d) {
-				this._current = this._current || d;
-				var interpolate = d3.interpolate(this._current, d);
-				this._current = interpolate(0);
-				return function(t) {
-					return arc(interpolate(t));
-				};
-			});
-
-		slice.exit()
-			.remove();
-
-		/* ------- TEXT LABELS -------*/
-
-		var text = svg.select(".labels").selectAll("text")
-			.data(pie(data), key);
-
-		text.enter()
-			.append("text")
-			.attr("dy", ".35em")
-			.text(function(d) {
-				return d.data.name + " ($"+d.data.sale_totals+")";
-			})
-			.on("click", function(d){
-				console.log(d);
-				if( d.data.action == 1 ) {
-					// do a thing!
-					get_unregistered_users($selector);
-				}
-			});
-
-		function midAngle(d){
-			return d.startAngle + (d.endAngle - d.startAngle)/2;
-		}
-
-		text.transition().duration(1000)
-			.attrTween("transform", function(d) {
-				this._current = this._current || d;
-				var interpolate = d3.interpolate(this._current, d);
-				this._current = interpolate(0);
-				return function(t) {
-					var d2 = interpolate(t);
-					var pos = outerArc.centroid(d2);
-					pos[0] = radius * (midAngle(d2) < Math.PI ? 1 : -1);
-					return "translate("+ pos +")";
-				};
-			})
-			.styleTween("text-anchor", function(d){
-				this._current = this._current || d;
-				var interpolate = d3.interpolate(this._current, d);
-				this._current = interpolate(0);
-				return function(t) {
-					var d2 = interpolate(t);
-					return midAngle(d2) < Math.PI ? "start":"end";
-				};
-			});
-
-		text.exit()
-			.remove();
-
-		/* ------- SLICE TO TEXT POLYLINES -------*/
-
-		var polyline = svg.select(".lines").selectAll("polyline")
-			.data(pie(data), key);
-
-		polyline.enter()
-			.append("polyline");
-
-		polyline.transition().duration(1000)
-			.attrTween("points", function(d){
-				this._current = this._current || d;
-				var interpolate = d3.interpolate(this._current, d);
-				this._current = interpolate(0);
-				return function(t) {
-					var d2 = interpolate(t);
-					var pos = outerArc.centroid(d2);
-					pos[0] = radius * 0.95 * (midAngle(d2) < Math.PI ? 1 : -1);
-					return [arc.centroid(d2), outerArc.centroid(d2), pos];
-				};
-			});
-
-		polyline.exit()
-			.remove();
-
+		dataset.forEach( function(el){
+			if( el.sale_totals > 0 ) {
+				data_labels.push(el.name);
+				data_array.push(el.sale_totals);
+			}
+		});
+		var data = {
+			labels: data_labels,
+			datasets: [{
+				data: data_array
+			}]
+		};
+		console.log(data);
+		// create the line chart
+		var PieChart = new Chart($selector, {
+		    type: 'pie',
+		    data: data
+		});
 	}
 
-	function render_product_sales_graph_v2( dataset, $selector ) {
+	function render_product_sales_graph_v2( dataset, $selector ){
 		// var ctx = $('#price-chart');
 		$selector.html('').siblings('.chartjs-hidden-iframe').remove();
 		var data = {
@@ -300,8 +189,9 @@
 	            pointHitRadius: 10,
 			});
 		} );
+
 		// create the line chart
-		var myLineChart = new Chart($selector, {
+		var LineChart = new Chart($selector, {
 		    type: 'line',
 		    data: data
 		});
